@@ -24,37 +24,50 @@ def load_data_from_excel(file):
 def train_or_load_model(file):
     model_path = 'model_dnn_vo_tuyen_dien.h5'
     scaler_path = 'scaler_params.npy'
+
+    # Kiểm tra sự tồn tại của mô hình và scaler trước khi tải
+    model_exists = os.path.exists(model_path)
+    scaler_exists = os.path.exists(scaler_path)
     
-    if os.path.exists(model_path) and os.path.exists(scaler_path):
-        model = load_model(model_path)
-        scaler_params = np.load(scaler_path, allow_pickle=True).item()
-        scaler = StandardScaler()
-        scaler.mean_ = scaler_params['mean']
-        scaler.scale_ = scaler_params['scale']
-    else:
-        X, y = load_data_from_excel(file)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        
-        scaler = StandardScaler()
-        X_train = scaler.fit_transform(X_train)
-        X_test = scaler.transform(X_test)
-        
-        scaler_params = {'mean': scaler.mean_, 'scale': scaler.scale_}
-        np.save(scaler_path, scaler_params)
-        
-        model = Sequential([
-            Dense(64, input_shape=(10,), activation='relu'),  # input_shape cập nhật với 10 đặc trưng
-            Dense(128, activation='relu'),
-            Dense(64, activation='relu'),
-            Dense(2)
-        ])
-        
-        model.compile(optimizer='adam', loss='mse', metrics=['mae'])
-        early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
-        model.fit(X_train, y_train, epochs=100, batch_size=16, validation_split=0.2, callbacks=[early_stopping], verbose=1)
-        model.save(model_path)
+    if model_exists and scaler_exists:
+        try:
+            model = load_model(model_path)
+            scaler_params = np.load(scaler_path, allow_pickle=True).item()
+            scaler = StandardScaler()
+            scaler.mean_ = scaler_params['mean']
+            scaler.scale_ = scaler_params['scale']
+            return model, scaler
+        except Exception as e:
+            st.error(f"Lỗi khi tải mô hình hoặc scaler: {e}")
+            # Nếu tải thất bại, xóa các file hiện tại để huấn luyện lại
+            os.remove(model_path)
+            os.remove(scaler_path)
+
+    # Huấn luyện lại mô hình nếu không tồn tại hoặc tải thất bại
+    X, y = load_data_from_excel(file)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+    
+    scaler_params = {'mean': scaler.mean_, 'scale': scaler.scale_}
+    np.save(scaler_path, scaler_params)
+    
+    model = Sequential([
+        Dense(64, input_shape=(10,), activation='relu'),
+        Dense(128, activation='relu'),
+        Dense(64, activation='relu'),
+        Dense(2)
+    ])
+    
+    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+    early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+    model.fit(X_train, y_train, epochs=100, batch_size=16, validation_split=0.2, callbacks=[early_stopping], verbose=1)
+    model.save(model_path)
     
     return model, scaler
+
 
 # Hàm dự đoán tọa độ
 def predict_coordinates(model, scaler, X):
