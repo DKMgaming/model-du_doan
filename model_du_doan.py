@@ -15,7 +15,7 @@ from streamlit_folium import folium_static
 def load_data_from_excel(file):
     data = pd.read_excel(file)
     X = data[["Kinh_do_tram_thu", "Vi_do_tram_thu", "Do_cao_anten_thu", 
-              "Muc_tin_hieu", "Azimuth", "Chat_luong_phep_do", "Chieu_cao_anten_tram_phat"]].values
+              "Muc_tin_hieu", "Azimuth", "Chat_luong_phep_do", "Chieu_cao_anten_tram_phat", "Tan_so"]].values
     y = data[["Kinh_do_tram_phat", "Vi_do_tram_phat"]].values
     return X, y
 
@@ -42,7 +42,7 @@ def train_or_load_model(file):
         np.save(scaler_path, scaler_params)
         
         model = Sequential([
-            Dense(64, input_shape=(7,), activation='relu'),
+            Dense(64, input_shape=(8,), activation='relu'),  # input_shape cập nhật với 8 đặc trưng
             Dense(128, activation='relu'),
             Dense(64, activation='relu'),
             Dense(2)
